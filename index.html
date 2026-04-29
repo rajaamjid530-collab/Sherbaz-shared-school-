@@ -1,0 +1,142 @@
+
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sherbaz Shaheed Model School - Management System</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; }
+        .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; }
+        @media print { .no-print { display: none; } .print-only { display: block; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function SchoolSystem() {
+            const [student, setStudent] = useState({ name: '', father: '', class: '', rollNo: '' });
+            const [marks, setMarks] = useState({ math: 0, english: 0, urdu: 0, science: 0 });
+            const [fee, setFee] = useState({ amount: '', month: '' });
+
+            const calculateResult = () => {
+                const total = Object.values(marks).reduce((a, b) => Number(a) + Number(b), 0);
+                const percentage = (total / 400) * 100;
+                let grade = 'F';
+                if (percentage >= 80) grade = 'A+';
+                else if (percentage >= 70) grade = 'A';
+                else if (percentage >= 60) grade = 'B';
+                else if (percentage >= 50) grade = 'C';
+                return { total, percentage: percentage.toFixed(2), grade };
+            };
+
+            const printPage = () => window.print();
+
+            return (
+                <div className="max-w-4xl mx-auto p-4 md:p-8">
+                    <header className="text-center mb-10 bg-blue-800 text-white p-6 rounded-lg shadow-xl">
+                        <h1 className="text-3xl font-bold mb-2">SHERBAZ SHAHEED MODEL SCHOOL</h1>
+                        <p className="text-lg">Student Information & Management Portal</p>
+                    </header>
+
+                    {/* Registration Section */}
+                    <section className="bg-white p-6 rounded-lg shadow-md mb-8 no-print">
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2 text-blue-700">1. Student Registration</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input className="border p-2 rounded" placeholder="Student Name" onChange={e => setStudent({...student, name: e.target.value})} />
+                            <input className="border p-2 rounded" placeholder="Father's Name" onChange={e => setStudent({...student, father: e.target.value})} />
+                            <input className="border p-2 rounded" placeholder="Class" onChange={e => setStudent({...student, class: e.target.value})} />
+                            <input className="border p-2 rounded" placeholder="Roll Number" onChange={e => setStudent({...student, rollNo: e.target.value})} />
+                        </div>
+                    </section>
+
+                    {/* Result Entry */}
+                    <section className="bg-white p-6 rounded-lg shadow-md mb-8 no-print">
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2 text-green-700">2. Examination Marks (Out of 100)</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div><label>Math</label><input type="number" className="border p-2 rounded w-full" onChange={e => setMarks({...marks, math: e.target.value})} /></div>
+                            <div><label>English</label><input type="number" className="border p-2 rounded w-full" onChange={e => setMarks({...marks, english: e.target.value})} /></div>
+                            <div><label>Urdu</label><input type="number" className="border p-2 rounded w-full" onChange={e => setMarks({...marks, urdu: e.target.value})} /></div>
+                            <div><label>Science</label><input type="number" className="border p-2 rounded w-full" onChange={e => setMarks({...marks, science: e.target.value})} /></div>
+                        </div>
+                    </section>
+
+                    {/* Output / Print Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Fee Slip Card */}
+                        <div className="bg-white p-6 border-2 border-blue-200 rounded-lg shadow-lg relative">
+                            <div className="text-center border-b-2 border-blue-100 mb-4 pb-2">
+                                <h3 className="font-bold text-blue-800">FEE SLIP</h3>
+                                <p className="text-xs">Sherbaz Shaheed Model School</p>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                                <p><strong>Name:</strong> {student.name || '---'}</p>
+                                <p><strong>Class:</strong> {student.class || '---'}</p>
+                                <p><strong>Month:</strong> <input type="text" className="border-b no-print w-20" placeholder="e.g May" onChange={e => setFee({...fee, month: e.target.value})} /> {fee.month}</p>
+                                <p className="text-lg font-bold mt-4">Total Amount: <input type="number" className="border-b no-print w-24" placeholder="Amount" onChange={e => setFee({...fee, amount: e.target.value})} /> Rs. {fee.amount}</p>
+                            </div>
+                            <button onClick={printPage} className="mt-4 bg-blue-600 text-white px-4 py-1 rounded text-sm no-print hover:bg-blue-700">Print Slip</button>
+                        </div>
+
+                        {/* Result Card */}
+                        <div className="bg-white p-6 border-2 border-green-200 rounded-lg shadow-lg">
+                            <div className="text-center border-b-2 border-green-100 mb-4 pb-2">
+                                <h3 className="font-bold text-green-800">ANNUAL RESULT CARD</h3>
+                                <p className="text-xs">Session 2025-26</p>
+                            </div>
+                            <div className="text-sm space-y-1 mb-4">
+                                <p><strong>Student:</strong> {student.name}</p>
+                                <p><strong>Roll No:</strong> {student.rollNo}</p>
+                            </div>
+                            <table className="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="border p-1">Subject</th>
+                                        <th className="border p-1">Marks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td className="border p-1">Math</td><td className="border p-1">{marks.math}</td></tr>
+                                    <tr><td className="border p-1">English</td><td className="border p-1">{marks.english}</td></tr>
+                                    <tr><td className="border p-1">Urdu</td><td className="border p-1">{marks.urdu}</td></tr>
+                                    <tr><td className="border p-1">Science</td><td className="border p-1">{marks.science}</td></tr>
+                                    <tr className="bg-green-50 font-bold">
+                                        <td className="border p-1">Total</td>
+                                        <td className="border p-1">{calculateResult().total} / 400</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div className="mt-4 flex justify-between items-center">
+                                <div className="text-center bg-blue-50 p-2 rounded">
+                                    <p className="text-xs text-gray-500">Percentage</p>
+                                    <p className="font-bold text-blue-700">{calculateResult().percentage}%</p>
+                                </div>
+                                <div className="text-center bg-green-50 p-2 rounded">
+                                    <p className="text-xs text-gray-500">Grade</p>
+                                    <p className="font-bold text-green-700">{calculateResult().grade}</p>
+                                </div>
+                            </div>
+                            <button onClick={printPage} className="mt-4 bg-green-600 text-white px-4 py-1 rounded text-sm no-print hover:bg-green-700">Print Result</button>
+                        </div>
+                    </div>
+
+                    <footer className="mt-12 text-center text-gray-500 text-sm no-print border-t pt-4">
+                        <p>© 2026 Sherbaz Shaheed Model School | Developed for Management Excellence</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SchoolSystem />);
+    </script>
+</body>
+</html>
