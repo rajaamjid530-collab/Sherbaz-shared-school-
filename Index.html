@@ -1,1 +1,62 @@
+import React, { useState } from "react";
 
+export default function SchoolApp() { const [logo, setLogo] = useState(null); const [student, setStudent] = useState({ name: "", class: "", father: "" }); const [fee, setFee] = useState({ amount: "", month: "" }); const [result, setResult] = useState({ marks: "", total: "", grade: "" });
+
+const handleLogoUpload = (e) => { const file = e.target.files[0]; if (file) setLogo(URL.createObjectURL(file)); };
+
+const printPage = () => window.print();
+
+return ( <div className="p-6 font-sans"> <h1 className="text-2xl font-bold mb-4">School Mini System</h1>
+
+{/* Logo Upload */}
+  <div className="mb-6">
+    <label className="block mb-2 font-semibold">Upload School Logo:</label>
+    <input type="file" onChange={handleLogoUpload} />
+    {logo && <img src={logo} alt="logo" className="w-20 mt-2" />}
+  </div>
+
+  {/* Registration */}
+  <div className="border p-4 mb-6 rounded-2xl shadow">
+    <h2 className="text-xl font-semibold mb-2">Student Registration</h2>
+    <input placeholder="Name" className="border p-2 mr-2" onChange={(e) => setStudent({ ...student, name: e.target.value })} />
+    <input placeholder="Class" className="border p-2 mr-2" onChange={(e) => setStudent({ ...student, class: e.target.value })} />
+    <input placeholder="Father Name" className="border p-2" onChange={(e) => setStudent({ ...student, father: e.target.value })} />
+  </div>
+
+  {/* Fee Slip */}
+  <div className="border p-4 mb-6 rounded-2xl shadow">
+    <h2 className="text-xl font-semibold mb-2">Fee Slip</h2>
+    <input placeholder="Amount" className="border p-2 mr-2" onChange={(e) => setFee({ ...fee, amount: e.target.value })} />
+    <input placeholder="Month" className="border p-2" onChange={(e) => setFee({ ...fee, month: e.target.value })} />
+
+    <div className="mt-4 border p-4">
+      {logo && <img src={logo} className="w-16 mb-2" />}
+      <p>Name: {student.name}</p>
+      <p>Class: {student.class}</p>
+      <p>Amount: {fee.amount}</p>
+      <p>Month: {fee.month}</p>
+    </div>
+
+    <button onClick={printPage} className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Print Fee Slip</button>
+  </div>
+
+  {/* Result Card */}
+  <div className="border p-4 rounded-2xl shadow">
+    <h2 className="text-xl font-semibold mb-2">Result Card</h2>
+    <input placeholder="Marks" className="border p-2 mr-2" onChange={(e) => setResult({ ...result, marks: e.target.value })} />
+    <input placeholder="Total" className="border p-2 mr-2" onChange={(e) => setResult({ ...result, total: e.target.value })} />
+    <input placeholder="Grade" className="border p-2" onChange={(e) => setResult({ ...result, grade: e.target.value })} />
+
+    <div className="mt-4 border p-4">
+      {logo && <img src={logo} className="w-16 mb-2" />}
+      <p>Name: {student.name}</p>
+      <p>Class: {student.class}</p>
+      <p>Marks: {result.marks}/{result.total}</p>
+      <p>Grade: {result.grade}</p>
+    </div>
+
+    <button onClick={printPage} className="mt-2 bg-green-500 text-white px-4 py-2 rounded">Print Result</button>
+  </div>
+</div>
+
+); }
