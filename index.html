@@ -3,27 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sherbaz Shaheed Model School | Portal</title>
+    <title>Sherbaz Shaheed Model School | Management Portal</title>
+    
+    <!-- Dependencies -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .urdu { font-family: 'Noto Nastaliq Urdu', serif; }
-        .luxury-bg { background: linear-gradient(135deg, #001f3f 0%, #003366 100%); }
-        .gold-text { color: #D4AF37; }
-        .gold-border { border-color: #D4AF37; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+        
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .urdu { font-family: 'Noto Nastaliq Urdu', serif; line-height: 2.2; }
+        .luxury-nav { background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%); }
+        .gold-accent { color: #fbbf24; }
+        
+        /* رزلٹ کارڈ واٹر مارک */
+        .card-watermark {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 80px; font-weight: bold; color: rgba(30, 58, 138, 0.05);
+            white-space: nowrap; pointer-events: none; z-index: 0;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            #printable-card { box-shadow: none; border: 1px solid #ddd; width: 100%; height: auto; }
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // فائر بیس کنفیگریشن
         const firebaseConfig = {
             apiKey: "AIzaSyB4spY-hxsdPy-V6yATT16c_JU7k",
             authDomain: "planning-with-ai-d9722.firebaseapp.com",
@@ -32,147 +47,167 @@
             messagingSenderId: "839875393490",
             appId: "1:839875393490:web:90d735888d08a41141a0b"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         function App() {
-            const [view, setView] = useState('home'); // home, result, admin, dashboard
-            const [adminPass, setAdminPass] = useState("");
-            const [student, setStudent] = useState({ name: '', class: '', roll: '', marks: '' });
+            const [page, setPage] = useState('home');
+            const [pass, setPass] = useState("");
             const [searchRoll, setSearchRoll] = useState("");
-            const [foundStudent, setFoundStudent] = useState(null);
-            const [msg, setMsg] = useState("");
+            const [studentData, setStudentData] = useState(null);
+            
+            // ڈیٹا انٹری اسٹیٹ
+            const [entry, setEntry] = useState({
+                name: '', roll: '', class: '', photo: '',
+                s1: 0, s2: 0, s3: 0, s4: 0, s5: 0, s6: 0, s7: 0, s8: 0, s9: 0, s10: 0
+            });
 
-            // ایڈمن لاگ ان فنکشن
-            const handleAdminLogin = () => {
-                if (adminPass === "Sherbaz123") {
-                    setView('dashboard');
-                    setMsg("");
-                } else {
-                    setMsg("غلط پاسورڈ! دوبارہ کوشش کریں۔");
-                }
+            const handlePhoto = (e) => {
+                const reader = new FileReader();
+                reader.onload = () => setEntry({...entry, photo: reader.result});
+                reader.readAsDataURL(e.target.files[0]);
             };
 
-            // ڈیٹا سیو کرنے کا فنکشن (Admin Only)
-            const saveToFirebase = async () => {
-                if(!student.name || !student.roll) return alert("براہ کرم تمام معلومات لکھیں");
+            const calculate = (d) => {
+                const got = Object.keys(d).filter(k => k.startsWith('s')).reduce((acc, k) => acc + Number(d[k]), 0);
+                const perc = (got / 1000 * 100).toFixed(1);
+                return { got, perc, grade: perc >= 80 ? 'A+' : perc >= 70 ? 'A' : perc >= 60 ? 'B' : perc >= 50 ? 'C' : 'D' };
+            };
+
+            const save = async () => {
+                if(!entry.roll || !entry.name) return alert("براہ کرم بنیادی معلومات پُر کریں۔");
                 try {
-                    await db.collection("students").doc(student.roll).set({
-                        ...student,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    alert("ڈیٹا محفوظ ہو گیا!");
-                    setStudent({ name: '', class: '', roll: '', marks: '' });
-                } catch (e) { alert("ایرر: " + e.message); }
+                    await db.collection("students").doc(entry.roll).set(entry);
+                    alert("ڈیٹا محفوظ ہوگیا!");
+                    setPage('home');
+                } catch(e) { alert(e.message); }
             };
 
-            // رزلٹ تلاش کرنے کا فنکشن (For Parents)
-            const searchResult = async () => {
-                setFoundStudent(null);
+            const search = async () => {
                 const doc = await db.collection("students").doc(searchRoll).get();
-                if (doc.exists) {
-                    setFoundStudent(doc.data());
-                } else {
-                    alert("اس رول نمبر کا کوئی ریکارڈ نہیں ملا۔");
-                }
+                if(doc.exists) setStudentData(doc.data());
+                else alert("رول نمبر نہیں ملا۔");
             };
 
             return (
                 <div className="min-h-screen flex flex-col">
                     {/* Header */}
-                    <header className="luxury-bg text-white p-6 shadow-2xl border-b-4 gold-border">
-                        <div className="container mx-auto flex justify-between items-center">
-                            <h1 className="text-2xl md:text-3xl font-bold gold-text urdu">شہباز شہید ماڈل اسکول</h1>
-                            <nav className="space-x-4 space-x-reverse">
-                                <button onClick={() => setView('home')} className="hover:text-yellow-400">ہوم</button>
-                                <button onClick={() => setView('result')} className="hover:text-yellow-400">رزلٹ پورٹل</button>
-                                <button onClick={() => setView('admin')} className="bg-yellow-600 px-4 py-1 rounded text-sm font-bold">ایڈمن لاگ ان</button>
-                            </nav>
+                    <nav className="luxury-nav text-white shadow-xl no-print">
+                        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+                            <h1 className="text-2xl md:text-3xl font-bold gold-accent urdu">شہباز شہید ماڈل اسکول</h1>
+                            <div className="flex gap-4 urdu text-sm">
+                                <button onClick={() => setPage('home')} className="hover:text-yellow-400">ہوم</button>
+                                <button onClick={() => {setPage('search'); setStudentData(null);}} className="hover:text-yellow-400">رزلٹ</button>
+                                <button onClick={() => setPage('login')} className="bg-yellow-600 px-4 py-1 rounded-full font-bold">ایڈمن</button>
+                            </div>
                         </div>
-                    </header>
+                    </nav>
 
-                    {/* Main Content */}
-                    <main className="flex-grow container mx-auto p-4">
-                        
-                        {/* 1. Home Page */}
-                        {view === 'home' && (
-                            <div className="text-center mt-20 animate-fade-in">
-                                <h2 className="text-4xl font-extrabold text-blue-900 mb-4 urdu">تعلیم و تربیت کا بہترین مرکز</h2>
-                                <p className="text-gray-600 text-lg mb-8">شہباز شہید ماڈل اسکول میں آپ کا خیر مقدم ہے۔ ہم آپ کے بچوں کے مستقبل کو روشن بنانے کے لیے کوشاں ہیں۔</p>
-                                <div className="grid md:grid-cols-3 gap-6">
-                                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-800">
-                                        <h3 className="font-bold text-xl mb-2">جدید لیب</h3>
-                                        <p className="text-sm text-gray-500">کمپیوٹر اور سائنس کی بہترین سہولیات۔</p>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-800">
-                                        <h3 className="font-bold text-xl mb-2">تجربہ کار اساتذہ</h3>
-                                        <p className="text-sm text-gray-500">اعلیٰ تعلیم یافتہ اور محنتی عملہ۔</p>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-800">
-                                        <h3 className="font-bold text-xl mb-2">اخلاقی تربیت</h3>
-                                        <p className="text-sm text-gray-500">تعلیم کے ساتھ بہترین کردار سازی۔</p>
-                                    </div>
+                    <main className="flex-grow container mx-auto p-4 md:p-8">
+                        {page === 'home' && (
+                            <div className="text-center py-20 animate-fade-in">
+                                <h2 className="text-5xl font-bold text-slate-800 mb-6 urdu">معیاری تعلیم، روشن مستقبل</h2>
+                                <p className="text-gray-500 text-xl max-w-2xl mx-auto">شہباز شہید ماڈل اسکول کے ڈیجیٹل پورٹل پر خوش آمدید۔ یہاں آپ بچوں کے تعلیمی نتائج اور رجسٹریشن دیکھ سکتے ہیں۔</p>
+                                <div className="mt-12 flex justify-center gap-6 no-print">
+                                    <button onClick={() => setPage('search')} className="bg-blue-800 text-white px-8 py-3 rounded-xl font-bold shadow-lg">رزلٹ چیک کریں</button>
                                 </div>
                             </div>
                         )}
 
-                        {/* 2. Result Search Portal */}
-                        {view === 'result' && (
-                            <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded-2xl shadow-2xl border gold-border">
-                                <h2 className="text-2xl font-bold text-center mb-6 text-blue-900">آن لائن رزلٹ کارڈ</h2>
-                                <input type="text" placeholder="رول نمبر درج کریں" className="w-full border-2 p-3 rounded-lg mb-4 text-center text-xl font-bold focus:border-blue-900 outline-none" 
-                                    onChange={(e) => setSearchRoll(e.target.value)} />
-                                <button onClick={searchResult} className="w-full luxury-bg text-white py-3 rounded-lg font-bold shadow-lg hover:opacity-90">رزلٹ دیکھیں</button>
+                        {page === 'login' && (
+                            <div className="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-2xl mt-10">
+                                <h2 className="text-2xl font-bold mb-6 text-center">ایڈمن لاگ ان</h2>
+                                <input type="password" placeholder="پاسورڈ" className="w-full border p-3 rounded-lg mb-4" onChange={e => setPass(e.target.value)} />
+                                <button onClick={() => pass === 'Sherbaz2026' ? setPage('admin') : alert('غلط پاسورڈ')} className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold">داخل ہوں</button>
+                            </div>
+                        )}
 
-                                {foundStudent && (
-                                    <div className="mt-8 p-6 bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl">
-                                        <p className="text-lg"><strong>نام:</strong> {foundStudent.name}</p>
-                                        <p className="text-lg"><strong>کلاس:</strong> {foundStudent.class}</p>
-                                        <p className="text-lg"><strong>رول نمبر:</strong> {foundStudent.roll}</p>
-                                        <div className="mt-4 p-3 bg-white rounded shadow text-center">
-                                            <p className="text-xl font-bold text-green-700">رزلٹ: {foundStudent.marks}</p>
+                        {page === 'admin' && (
+                            <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-lg border-t-8 border-blue-900">
+                                <h2 className="text-2xl font-bold mb-8 border-b pb-4">طالب علم رجسٹریشن اور مارکس انٹری</h2>
+                                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                                    <input type="text" placeholder="نام" className="border p-3 rounded" onChange={e => setEntry({...entry, name: e.target.value})} />
+                                    <input type="text" placeholder="رول نمبر" className="border p-3 rounded" onChange={e => setEntry({...entry, roll: e.target.value})} />
+                                    <input type="text" placeholder="کلاس" className="border p-3 rounded" onChange={e => setEntry({...entry, class: e.target.value})} />
+                                    <input type="file" className="md:col-span-3 border p-2 bg-gray-50" onChange={handlePhoto} />
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+                                    {['اردو','انگلش','ریاضی','سائنس','اسلامیات','پاک اسٹڈی','کمپیوٹر','قرآن','فزکس','کیمسٹری'].map((s, i) => (
+                                        <input key={i} type="number" placeholder={s} className="border p-2 rounded text-sm" onChange={e => setEntry({...entry, [`s${i+1}`]: e.target.value})} />
+                                    ))}
+                                </div>
+                                <button onClick={save} className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-md">فائر بیس میں محفوظ کریں</button>
+                            </div>
+                        )}
+
+                        {page === 'search' && (
+                            <div className="max-w-4xl mx-auto">
+                                <div className="bg-white p-6 rounded-2xl shadow-md mb-8 flex gap-3 no-print">
+                                    <input type="text" placeholder="رول نمبر لکھیں..." className="flex-1 border p-3 rounded-xl outline-none focus:ring-2 ring-blue-500" onChange={e => setSearchRoll(e.target.value)} />
+                                    <button onClick={search} className="bg-blue-900 text-white px-6 rounded-xl font-bold">سرچ</button>
+                                </div>
+
+                                {studentData && (() => {
+                                    const res = calculate(studentData);
+                                    return (
+                                        <div id="printable-card" className="bg-white p-10 rounded-lg shadow-2xl relative border-4 border-double border-slate-300">
+                                            <div className="card-watermark urdu">شہباز شہید ماڈل اسکول</div>
+                                            
+                                            <div className="text-center border-b-2 border-slate-800 pb-4 mb-6">
+                                                <h1 className="text-3xl font-bold urdu text-blue-900">شہباز شہید ماڈل اسکول</h1>
+                                                <p className="font-bold text-gray-600">رزلٹ کارڈ برائے سالانہ امتحان 2026</p>
+                                            </div>
+
+                                            <div className="flex justify-between mb-8">
+                                                <div className="space-y-2 text-lg">
+                                                    <p><strong>نام:</strong> {studentData.name}</p>
+                                                    <p><strong>رول نمبر:</strong> {studentData.roll}</p>
+                                                    <p><strong>کلاس:</strong> {studentData.class}</p>
+                                                </div>
+                                                <div className="w-32 h-32 border-2 border-slate-200 rounded overflow-hidden">
+                                                    {studentData.photo && <img src={studentData.photo} className="w-full h-full object-cover" />}
+                                                </div>
+                                            </div>
+
+                                            <table className="w-full border-collapse border border-slate-400 mb-8 text-center">
+                                                <thead className="bg-slate-100">
+                                                    <tr>
+                                                        <th className="border border-slate-400 p-2">مضمون</th>
+                                                        <th className="border border-slate-400 p-2">کل نمبر</th>
+                                                        <th className="border border-slate-400 p-2">حاصل کردہ</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {['اردو','انگلش','ریاضی','سائنس','اسلامیات','پاک اسٹڈی','کمپیوٹر','قرآن','فزکس','کیمسٹری'].map((s, i) => (
+                                                        <tr key={i}>
+                                                            <td className="border border-slate-400 p-2 font-bold">{s}</td>
+                                                            <td className="border border-slate-400 p-2">100</td>
+                                                            <td className="border border-slate-400 p-2 font-bold">{studentData[`s${i+1}`]}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+
+                                            <div className="flex justify-between bg-blue-900 text-white p-4 rounded text-xl font-bold">
+                                                <span>کل نمبر: {res.got} / 1000</span>
+                                                <span>فیصد: {res.perc}%</span>
+                                                <span>گریڈ: {res.grade}</span>
+                                            </div>
+
+                                            <div className="mt-10 flex justify-end gap-3 no-print">
+                                                <button onClick={() => window.print()} className="bg-slate-800 text-white px-6 py-2 rounded">پرنٹ کریں</button>
+                                                <button onClick={() => html2pdf().from(document.getElementById('printable-card')).save()} className="bg-red-600 text-white px-6 py-2 rounded">پی ڈی ایف ڈاؤن لوڈ</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         )}
-
-                        {/* 3. Admin Login */}
-                        {view === 'admin' && (
-                            <div className="max-w-sm mx-auto mt-20 bg-white p-8 rounded-2xl shadow-2xl">
-                                <h2 className="text-xl font-bold mb-4 text-center text-gray-700">ایڈمن لاگ ان</h2>
-                                <input type="password" placeholder="پاسورڈ درج کریں" className="w-full border p-3 rounded mb-4" 
-                                    onChange={(e) => setAdminPass(e.target.value)} />
-                                <button onClick={handleAdminLogin} className="w-full bg-red-600 text-white py-3 rounded font-bold">داخل ہوں</button>
-                                {msg && <p className="text-red-500 text-sm mt-2 text-center">{msg}</p>}
-                            </div>
-                        )}
-
-                        {/* 4. Admin Dashboard */}
-                        {view === 'dashboard' && (
-                            <div className="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow-2xl border-t-8 border-green-600">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-green-800">ایڈمن کنٹرول پینل</h2>
-                                    <button onClick={() => setView('home')} className="text-red-600 font-bold underline">لاگ آؤٹ</button>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input type="text" placeholder="طالب علم کا نام" className="border p-3 rounded" value={student.name} onChange={(e) => setStudent({...student, name: e.target.value})} />
-                                    <input type="text" placeholder="رول نمبر (ID)" className="border p-3 rounded" value={student.roll} onChange={(e) => setStudent({...student, roll: e.target.value})} />
-                                    <input type="text" placeholder="کلاس" className="border p-3 rounded" value={student.class} onChange={(e) => setStudent({...student, class: e.target.value})} />
-                                    <input type="text" placeholder="رزلٹ (مثلاً: 850/1100)" className="border p-3 rounded" value={student.marks} onChange={(e) => setStudent({...student, marks: e.target.value})} />
-                                </div>
-                                <button onClick={saveToFirebase} className="w-full mt-6 bg-green-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-green-700">ڈیٹا فائر بیس میں اپ ڈیٹ کریں</button>
-                            </div>
-                        )}
-
                     </main>
-
-                    {/* Footer */}
-                    <footer className="luxury-bg text-white text-center p-4 text-xs">
-                        © 2026 Sherbaz Shaheed Model School | Designed by Home Color Ideas & Design
+                    <footer className="bg-slate-900 text-white text-center p-4 text-xs no-print">
+                        © 2026 Sherbaz Shaheed Model School | High Performance System
                     </footer>
                 </div>
             );
