@@ -3,20 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sherbaz School System - Live Data</title>
-    <!-- React & Firebase Scripts -->
+    <title>Sherbaz Shaheed Model School | Portal</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .urdu { font-family: 'Noto Nastaliq Urdu', serif; }
+        .luxury-bg { background: linear-gradient(135deg, #001f3f 0%, #003366 100%); }
+        .gold-text { color: #D4AF37; }
+        .gold-border { border-color: #D4AF37; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-50">
     <div id="root"></div>
 
     <script type="text/babel">
-        // فائر بیس کنفیگریشن (آپ کے پروجیکٹ سے لی گئی ہے)
+        // فائر بیس کنفیگریشن
         const firebaseConfig = {
             apiKey: "AIzaSyB4spY-hxsdPy-V6yATT16c_JU7k",
             authDomain: "planning-with-ai-d9722.firebaseapp.com",
@@ -26,61 +33,153 @@
             appId: "1:839875393490:web:90d735888d08a41141a0b"
         };
 
-        // فائر بیس شروع کریں
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
-        function SchoolApp() {
-            const [student, setStudent] = useState({ name: '', class: '', roll: '' });
-            const [status, setStatus] = useState("");
+        function App() {
+            const [view, setView] = useState('home'); // home, result, admin, dashboard
+            const [adminPass, setAdminPass] = useState("");
+            const [student, setStudent] = useState({ name: '', class: '', roll: '', marks: '' });
+            const [searchRoll, setSearchRoll] = useState("");
+            const [foundStudent, setFoundStudent] = useState(null);
+            const [msg, setMsg] = useState("");
 
-            // ڈیٹا بیس میں سیو کرنے کا فنکشن
-            const saveData = async () => {
-                setStatus("سیو ہو رہا ہے...");
+            // ایڈمن لاگ ان فنکشن
+            const handleAdminLogin = () => {
+                if (adminPass === "Sherbaz123") {
+                    setView('dashboard');
+                    setMsg("");
+                } else {
+                    setMsg("غلط پاسورڈ! دوبارہ کوشش کریں۔");
+                }
+            };
+
+            // ڈیٹا سیو کرنے کا فنکشن (Admin Only)
+            const saveToFirebase = async () => {
+                if(!student.name || !student.roll) return alert("براہ کرم تمام معلومات لکھیں");
                 try {
-                    await db.collection("students").add({
+                    await db.collection("students").doc(student.roll).set({
                         ...student,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    setStatus("کامیابی سے سیو ہو گیا!");
-                    alert("ڈیٹا فائر بیس میں محفوظ ہو گیا ہے!");
-                } catch (error) {
-                    setStatus("ایرر: " + error.message);
+                    alert("ڈیٹا محفوظ ہو گیا!");
+                    setStudent({ name: '', class: '', roll: '', marks: '' });
+                } catch (e) { alert("ایرر: " + e.message); }
+            };
+
+            // رزلٹ تلاش کرنے کا فنکشن (For Parents)
+            const searchResult = async () => {
+                setFoundStudent(null);
+                const doc = await db.collection("students").doc(searchRoll).get();
+                if (doc.exists) {
+                    setFoundStudent(doc.data());
+                } else {
+                    alert("اس رول نمبر کا کوئی ریکارڈ نہیں ملا۔");
                 }
             };
 
             return (
-                <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg">
-                    <h1 className="text-xl font-bold mb-4 text-center border-b pb-2">اسکول ڈیٹا انٹری (Live)</h1>
-                    
-                    <div className="space-y-4">
-                        <input type="text" placeholder="طالب علم کا نام" className="w-full border p-2 rounded" 
-                            onChange={(e) => setStudent({...student, name: e.target.value})} />
-                        
-                        <input type="text" placeholder="کلاس" className="w-full border p-2 rounded" 
-                            onChange={(e) => setStudent({...student, class: e.target.value})} />
-                        
-                        <input type="text" placeholder="رول نمبر" className="w-full border p-2 rounded" 
-                            onChange={(e) => setStudent({...student, roll: e.target.value})} />
+                <div className="min-h-screen flex flex-col">
+                    {/* Header */}
+                    <header className="luxury-bg text-white p-6 shadow-2xl border-b-4 gold-border">
+                        <div className="container mx-auto flex justify-between items-center">
+                            <h1 className="text-2xl md:text-3xl font-bold gold-text urdu">شہباز شہید ماڈل اسکول</h1>
+                            <nav className="space-x-4 space-x-reverse">
+                                <button onClick={() => setView('home')} className="hover:text-yellow-400">ہوم</button>
+                                <button onClick={() => setView('result')} className="hover:text-yellow-400">رزلٹ پورٹل</button>
+                                <button onClick={() => setView('admin')} className="bg-yellow-600 px-4 py-1 rounded text-sm font-bold">ایڈمن لاگ ان</button>
+                            </nav>
+                        </div>
+                    </header>
 
-                        <button onClick={saveData} className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">
-                            فائر بیس میں محفوظ کریں
-                        </button>
-                    </div>
+                    {/* Main Content */}
+                    <main className="flex-grow container mx-auto p-4">
+                        
+                        {/* 1. Home Page */}
+                        {view === 'home' && (
+                            <div className="text-center mt-20 animate-fade-in">
+                                <h2 className="text-4xl font-extrabold text-blue-900 mb-4 urdu">تعلیم و تربیت کا بہترین مرکز</h2>
+                                <p className="text-gray-600 text-lg mb-8">شہباز شہید ماڈل اسکول میں آپ کا خیر مقدم ہے۔ ہم آپ کے بچوں کے مستقبل کو روشن بنانے کے لیے کوشاں ہیں۔</p>
+                                <div className="grid md:grid-cols-3 gap-6">
+                                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-800">
+                                        <h3 className="font-bold text-xl mb-2">جدید لیب</h3>
+                                        <p className="text-sm text-gray-500">کمپیوٹر اور سائنس کی بہترین سہولیات۔</p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-800">
+                                        <h3 className="font-bold text-xl mb-2">تجربہ کار اساتذہ</h3>
+                                        <p className="text-sm text-gray-500">اعلیٰ تعلیم یافتہ اور محنتی عملہ۔</p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-800">
+                                        <h3 className="font-bold text-xl mb-2">اخلاقی تربیت</h3>
+                                        <p className="text-sm text-gray-500">تعلیم کے ساتھ بہترین کردار سازی۔</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                    {status && <p className="mt-4 text-center text-sm font-bold text-blue-600">{status}</p>}
-                    
-                    <div className="mt-6 text-xs text-gray-400 text-center">
-                        نوٹ: یہ ڈیٹا اب آپ کے فائر بیس کنسول میں نظر آئے گا۔
-                    </div>
+                        {/* 2. Result Search Portal */}
+                        {view === 'result' && (
+                            <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded-2xl shadow-2xl border gold-border">
+                                <h2 className="text-2xl font-bold text-center mb-6 text-blue-900">آن لائن رزلٹ کارڈ</h2>
+                                <input type="text" placeholder="رول نمبر درج کریں" className="w-full border-2 p-3 rounded-lg mb-4 text-center text-xl font-bold focus:border-blue-900 outline-none" 
+                                    onChange={(e) => setSearchRoll(e.target.value)} />
+                                <button onClick={searchResult} className="w-full luxury-bg text-white py-3 rounded-lg font-bold shadow-lg hover:opacity-90">رزلٹ دیکھیں</button>
+
+                                {foundStudent && (
+                                    <div className="mt-8 p-6 bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl">
+                                        <p className="text-lg"><strong>نام:</strong> {foundStudent.name}</p>
+                                        <p className="text-lg"><strong>کلاس:</strong> {foundStudent.class}</p>
+                                        <p className="text-lg"><strong>رول نمبر:</strong> {foundStudent.roll}</p>
+                                        <div className="mt-4 p-3 bg-white rounded shadow text-center">
+                                            <p className="text-xl font-bold text-green-700">رزلٹ: {foundStudent.marks}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 3. Admin Login */}
+                        {view === 'admin' && (
+                            <div className="max-w-sm mx-auto mt-20 bg-white p-8 rounded-2xl shadow-2xl">
+                                <h2 className="text-xl font-bold mb-4 text-center text-gray-700">ایڈمن لاگ ان</h2>
+                                <input type="password" placeholder="پاسورڈ درج کریں" className="w-full border p-3 rounded mb-4" 
+                                    onChange={(e) => setAdminPass(e.target.value)} />
+                                <button onClick={handleAdminLogin} className="w-full bg-red-600 text-white py-3 rounded font-bold">داخل ہوں</button>
+                                {msg && <p className="text-red-500 text-sm mt-2 text-center">{msg}</p>}
+                            </div>
+                        )}
+
+                        {/* 4. Admin Dashboard */}
+                        {view === 'dashboard' && (
+                            <div className="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow-2xl border-t-8 border-green-600">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-green-800">ایڈمن کنٹرول پینل</h2>
+                                    <button onClick={() => setView('home')} className="text-red-600 font-bold underline">لاگ آؤٹ</button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="text" placeholder="طالب علم کا نام" className="border p-3 rounded" value={student.name} onChange={(e) => setStudent({...student, name: e.target.value})} />
+                                    <input type="text" placeholder="رول نمبر (ID)" className="border p-3 rounded" value={student.roll} onChange={(e) => setStudent({...student, roll: e.target.value})} />
+                                    <input type="text" placeholder="کلاس" className="border p-3 rounded" value={student.class} onChange={(e) => setStudent({...student, class: e.target.value})} />
+                                    <input type="text" placeholder="رزلٹ (مثلاً: 850/1100)" className="border p-3 rounded" value={student.marks} onChange={(e) => setStudent({...student, marks: e.target.value})} />
+                                </div>
+                                <button onClick={saveToFirebase} className="w-full mt-6 bg-green-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-green-700">ڈیٹا فائر بیس میں اپ ڈیٹ کریں</button>
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="luxury-bg text-white text-center p-4 text-xs">
+                        © 2026 Sherbaz Shaheed Model School | Designed by Home Color Ideas & Design
+                    </footer>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<SchoolApp/>);
+        root.render(<App />);
     </script>
 </body>
 </html>
